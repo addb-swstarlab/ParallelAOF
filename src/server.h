@@ -428,6 +428,7 @@ typedef long long ustime_t; /* microsecond time type. */
 #define RDB_CHILD_TYPE_NONE 0
 #define RDB_CHILD_TYPE_DISK 1     /* RDB is written to disk. */
 #define RDB_CHILD_TYPE_SOCKET 2   /* RDB is written to slave socket. */
+#define PAOF_CHILD_TYPE 3  /* Parallel AOF */
 
 /* Keyspace changes notification classes. Every class is associated with a
  * character for configuration purposes. */
