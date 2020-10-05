@@ -2416,12 +2416,6 @@ void backgroundSaveDoneHandlerDisk(int exitcode, int bysignal) {
     updateSlavesWaitingBgsave((!bysignal && exitcode == 0) ? C_OK : C_ERR, RDB_CHILD_TYPE_DISK);
 }
 
-/* juyeon
- *  TODO Parallel AOF DoneHandler
- */
-void backgroundParallelSaveDoneHandler(int exitcode, int bysignal) {
-	server.rdb_child_pid = -1;
-}
 
 /* A background saving child (BGSAVE) terminated its work. Handle this.
  * This function covers the case of RDB -> Salves socket transfers for
@@ -2517,6 +2511,74 @@ void backgroundSaveDoneHandlerSocket(int exitcode, int bysignal) {
 
     updateSlavesWaitingBgsave((!bysignal && exitcode == 0) ? C_OK : C_ERR, RDB_CHILD_TYPE_SOCKET);
 }
+
+
+/* juyeon */
+void backgroundParallelSaveDoneHandler(int exitcode, int bysignal){
+    if (!bysignal && exitcode == 0) {
+        serverLog(LL_NOTICE,
+            "Parallel Background saving terminated with success");
+        server.dirty = server.dirty - server.dirty_before_bgsave;
+        server.lastsave = time(NULL);
+        server.lastbgsave_status = C_OK;
+    } else if (!bysignal && exitcode != 0) {
+        serverLog(LL_WARNING, "Parallel Background saving error");
+        server.lastbgsave_status = C_ERR;
+    } else {
+        mstime_t latency;
+
+        serverLog(LL_WARNING,
+            "Parallel Background saving terminated by signal %d", bysignal);
+        latencyStartMonitor(latency);
+        rdbRemoveAllTempFile(server.aof_pthread_num);
+        latencyEndMonitor(latency);
+        latencyAddSampleIfNeeded("rdb-unlink-temp-file",latency);
+        /* SIGUSR1 is whitelisted, so we have a way to kill a child without
+         * tirggering an error conditon. */
+        if (bysignal != SIGUSR1)
+            server.lastbgsave_status = C_ERR;
+    }
+
+    /*renaming aof file*/
+   	rdbRenameAllTempFile(server.aof_pthread_num);
+
+    server.rdb_child_pid = -1;
+    server.rdb_child_type = RDB_CHILD_TYPE_NONE;
+    server.rdb_save_time_last = time(NULL)-server.rdb_save_time_start;
+    server.rdb_save_time_start = -1;
+    /* Possibly there are slaves waiting for a BGSAVE in order to be served
+     * (the first stage of SYNC is a bulk transfer of dump.rdb) */
+    updateSlavesWaitingBgsave((!bysignal && exitcode == 0) ? C_OK : C_ERR, RDB_CHILD_TYPE_DISK);
+}
+
+void rdbRemoveAllTempFile(int file_count){
+	char tmpfile[256];
+	int i;
+	for(i=0; i < file_count; i++){
+		memset(tmpfile, 0, sizeof(tmpfile));
+		snprintf(tmpfile, sizeof(tmpfile), "CTaof%d.aof", i+1);
+		unlink(tmpfile);
+	}
+}
+
+void rdbRenameAllTempFile(int file_count){
+
+	char tmpfile[256];
+	char dumpfile[256];
+	int i;
+	for(i=0; i < file_count; i++){
+		memset(tmpfile, 0, sizeof(tmpfile));
+		memset(dumpfile, 0, sizeof(dumpfile));
+		snprintf(tmpfile, sizeof(tmpfile), "CTaof%d.aof", i+1);
+		snprintf(dumpfile, sizeof(dumpfile), "CA%d.aof", i+1);
+
+		if(rename(tmpfile, dumpfile) == -1){
+			serverLog(LL_WARNING, "Error trying to rename the temporary RDB file : %s", strerror(errno));
+			exit(1);
+		}
+	}
+}
+
 
 /* When a background RDB saving/transfer terminates, call the right handler. */
 void backgroundSaveDoneHandler(int exitcode, int bysignal) {
