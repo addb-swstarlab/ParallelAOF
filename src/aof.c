@@ -739,21 +739,64 @@ void freeFakeClient(struct client *c) {
     zfree(c);
 }
 
-/* juyeon - MUST BE FIXED (COUNT & CHECK EXISTING FILES) */
-int get_paoffile_cnt() { // Return CA_.aof file num
-	return 0;
+/* juyeon - count & check existing files*/
+int get_paoffile_cnt() {
+	int i;
+	char aoffile[256];
+	int paof_count =0;
+
+	for(i=0; i < server.aof_pthread_num; i++){
+		memset(aoffile, 0, sizeof(aoffile));
+		snprintf(aoffile, 256, "CA%d.aof",i+1);
+		if (access(aoffile, F_OK) == 0){
+			paof_count ++;
+		}
+	}
+	return paof_count;
 }
 
-int get_temppaoffile_cnt() { // Return CTaof_.aof file num
-	return 0;
+
+int get_temppaoffile_cnt() {
+	int i;
+	char aoffile[256];
+	int temppaof_count =0;
+
+	for(i=0; i < server.aof_pthread_num; i++){
+		memset(aoffile, 0, sizeof(aoffile));
+		snprintf(aoffile, 256, "CTaof%d.aof",i+1);
+		if (access(aoffile, F_OK) == 0){
+			temppaof_count++;
+		}
+	}
+	return temppaof_count;
 }
 
-int checkpaoffile(int file_count){ // Check CA_.aof file
-	return 0;
+int checkpaoffile(int file_count){
+	int i;
+	char aoffile[256];
+
+	for(i=0; i < file_count; i++){
+		memset(aoffile, 0, sizeof(aoffile));
+		snprintf(aoffile, 256, "CA%d.aof",i+1);
+		if (access(aoffile, F_OK) == 0){
+			return C_OK;
+		}
+	}
+	return C_ERR;
 }
 
-int checktemppaoffile(int file_count){ // Check CTaof_.aof file
-	return 0;
+int checktemppaoffile(int file_count){
+	int i;
+	char aoffile[256];
+
+	for(i=0; i < file_count; i++){
+		memset(aoffile, 0, sizeof(aoffile));
+		snprintf(aoffile, 256, "CTaof%d.aof",i+1);
+		if (access(aoffile, F_OK) == 0){
+			return C_OK;
+		}
+	}
+	return C_ERR;
 }
 
 
