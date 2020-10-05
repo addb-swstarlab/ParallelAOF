@@ -1442,7 +1442,7 @@ int aofParallelSave() {
 	}
 
 
-	void *parallelAppendOnlyFile(void *data){
+void *parallelAppendOnlyFile(void *data){
 
 			char tmpfile[256];
 			FILE *fp;
@@ -1530,7 +1530,7 @@ int aofParallelSave() {
 	}
 
 
-	int parallelAppendOnlyFileRio(rio *aof, int *error, int min_idx, int max_idx, int idx) {
+int parallelAppendOnlyFileRio(rio *aof, int *error, int min_idx, int max_idx, int idx) {
 	    dictIterator *di = NULL;
 	    dictEntry *de;
 	    int j;
