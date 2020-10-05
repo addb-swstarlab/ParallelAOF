@@ -157,7 +157,5 @@ int rdbLoadBinaryFloatValue(rio *rdb, float *val);
 int rdbLoadRio(rio *rdb, rdbSaveInfo *rsi, int loading_aof);
 rdbSaveInfo *rdbPopulateSaveInfo(rdbSaveInfo *rsi);
 
-/* juyeon */
-void *parallelAppendOnlyFile(void *data);
 
 #endif

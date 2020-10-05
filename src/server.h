@@ -1640,7 +1640,10 @@ int writeCommandsDeniedByDiskError(void);
 int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi);
 
 /* juyeon */
+int aofParallelSave();
+void *parallelAppendOnlyFile(void *data);
 int parallelAppendOnlyFileRio(rio *aof, int *error, int min_idx, int max_idx, int idx);
+void backgroundParallelSaveDoneHandler(int exitcode, int bysignal);
 
 /* AOF persistence */
 void flushAppendOnlyFile(int force);
