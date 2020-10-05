@@ -492,7 +492,12 @@ void loadServerConfigFromString(char *config) {
                 err = "argument must be 'no', 'always' or 'everysec'";
                 goto loaderr;
             }
-        } else if (!strcasecmp(argv[0],"auto-aof-rewrite-percentage") &&
+        } /* juyeon */
+        else if (!strcasecmp(argv[0],"threadnum") && argc == 2) {
+        	server.aof_pthread_num = atoi(argv[1]);
+        }
+
+        else if (!strcasecmp(argv[0],"auto-aof-rewrite-percentage") &&
                    argc == 2)
         {
             server.aof_rewrite_perc = atoi(argv[1]);
