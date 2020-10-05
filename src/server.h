@@ -141,6 +141,8 @@ typedef long long ustime_t; /* microsecond time type. */
 #define CONFIG_DEFAULT_LFU_LOG_FACTOR 10
 #define CONFIG_DEFAULT_LFU_DECAY_TIME 1
 #define CONFIG_DEFAULT_AOF_FILENAME "appendonly.aof"
+#define CONFIG_DEFAULT_TEMP_AOF_FILENAME "temp.aof"  /*juyeon*/
+#define CONFIG_DEFAULT_TEMP_PAOF_FILENAME "CTaof.aof"
 #define CONFIG_DEFAULT_AOF_NO_FSYNC_ON_REWRITE 0
 #define CONFIG_DEFAULT_AOF_LOAD_TRUNCATED 1
 #define CONFIG_DEFAULT_AOF_USE_RDB_PREAMBLE 1
@@ -1644,6 +1646,16 @@ int aofParallelSave();
 void *parallelAppendOnlyFile(void *data);
 int parallelAppendOnlyFileRio(rio *aof, int *error, int min_idx, int max_idx, int idx);
 void backgroundParallelSaveDoneHandler(int exitcode, int bysignal);
+void aof_with_parallel();
+
+/* juyeon - PAOF Recovery */
+int Load_PAOF(int flags);
+int loadPAppendOnlyFile(char *filename);
+
+int checkpaoffile(int file_count);
+int checktemppaoffile(int file_count);
+int get_paoffile_cnt();
+int get_temppaoffile_cnt();
 
 /* AOF persistence */
 void flushAppendOnlyFile(int force);
