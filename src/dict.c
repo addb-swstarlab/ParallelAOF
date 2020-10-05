@@ -594,6 +594,81 @@ dictEntry *dictNext(dictIterator *iter)
     return NULL;
 }
 
+/* juyeon */
+dictIterator *dictGetIteratorwithMinMaxIdx(dict *d, int min, int max){
+    dictIterator *iter = zmalloc(sizeof(*iter));
+
+    iter->d = d;
+    iter->table = 0;
+    iter->index = (long) min-1;
+    iter->minindex = (long) min;
+    iter->maxindex = (long) max;
+    iter->safe = 0;
+    iter->entry = NULL;
+    iter->nextEntry = NULL;
+    return iter;
+}
+dictIterator *dictGetIteratorwithMaxIdx(dict *d, int min, int max){
+	dictIterator *iter = zmalloc(sizeof(*iter));
+
+	iter->d = d;
+	iter->table = 0;
+	iter->index = -1;
+	iter->minindex = (long) min;
+	iter->maxindex = (long) max;
+	iter->safe = 0;
+	iter->entry = NULL;
+	iter->nextEntry = NULL;
+	return iter;
+}
+
+dictIterator *dictGetSafeIteratorwithMinMaxIdx(dict *d, int min, int max){
+    dictIterator *i = dictGetIteratorwithMinMaxIdx(d, min, max);
+    i->safe = 1;
+    return i;
+}
+
+dictIterator *dictGetSafeIteratorwithMaxIdx(dict *d, int min, int max){
+    dictIterator *i = dictGetIteratorwithMaxIdx(d, min, max);
+    i->safe = 1;
+    return i;
+}
+
+dictEntry *dictNextwithIdx(dictIterator *iter){
+
+    while (1) {
+        if (iter->entry == NULL) {
+            dictht *ht = &iter->d->ht[iter->table];
+            if (iter->index == -1 && iter->table == 0) {
+                if (iter->safe)
+                    iter->d->iterators++;
+                else
+                    iter->fingerprint = dictFingerprint(iter->d);
+            }
+            iter->index++;
+            if (iter->index >= (long) ht->size) {
+                if (dictIsRehashing(iter->d) && iter->table == 0) {
+                    iter->table++;
+                    iter->index = iter->minindex;
+                    ht = &iter->d->ht[1];
+                } else {
+                    break;
+                }
+            }
+            iter->entry = ht->table[iter->index];
+        } else {
+            iter->entry = iter->nextEntry;
+        }
+        if (iter->entry) {
+            /* We need to save the 'next' here, the iterator user
+             * may delete the entry we are returning. */
+            iter->nextEntry = iter->entry->next;
+            return iter->entry;
+        }
+    }
+    return NULL;
+}
+
 void dictReleaseIterator(dictIterator *iter)
 {
     if (!(iter->index == -1 && iter->table == 0)) {

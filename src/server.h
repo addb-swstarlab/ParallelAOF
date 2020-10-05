@@ -1639,6 +1639,9 @@ int writeCommandsDeniedByDiskError(void);
 #include "rdb.h"
 int rdbSaveRio(rio *rdb, int *error, int flags, rdbSaveInfo *rsi);
 
+/* juyeon */
+int parallelAppendOnlyFileRio(rio *aof, int *error, int min_idx, int max_idx, int idx);
+
 /* AOF persistence */
 void flushAppendOnlyFile(int force);
 void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int argc);

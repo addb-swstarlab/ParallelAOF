@@ -1398,12 +1398,223 @@ void rdbRemoveTempFile(pid_t childpid) {
     unlink(tmpfile);
 }
 
-/* juyeon
- * TODO implement Parallel AOF module
- * */
+/* juyeon */
 
 int aofParallelSave() {
-	return C_OK;
+
+	pthread_t p_thread[server.aof_pthread_num];
+	    int thr_id, p_status, m_status;
+	    int i, j;
+	    int num =0;
+
+	    serverLog(LL_WARNING, "REWRITE START");
+
+	    for(i=0; i<server.aof_pthread_num; i++){
+	    	int idx = i+1;
+	    	if(i != server.aof_pthread_num-1){
+	    		thr_id = pthread_create(&p_thread[i], NULL, parallelAppendOnlyFile, (void *)idx);
+	    	} else {
+	    		m_status = parallelAppendOnlyFile((void *)idx);
+	    		if(m_status ==0) num++;
+	    	}
+	    }
+
+	    for(j=0; j<server.aof_pthread_num-1; j++){
+	    	pthread_join(p_thread[j], (void **)&p_status);
+	    	if(p_status ==0) num++;
+
+	    }
+	    if(num == server.aof_pthread_num){
+
+	    	server.dirty = 0;
+	    	server.lastsave = time(NULL);
+	    	server.lastbgsave_status = C_OK;
+
+	    	serverLog(LL_WARNING, "PAOF Success");
+	    	return C_OK;
+
+	    } else {
+
+	    	serverLog(LL_WARNING,"PAOF Fail");
+
+	    	return C_ERR;
+	    }
+	}
+
+
+	void *parallelAppendOnlyFile(void *data){
+
+			char tmpfile[256];
+			FILE *fp;
+			rio rdb;
+			int error; // =0;
+
+			int idx = (int) data;
+			redisDb *db = server.db;
+
+			int hash_size = 0;
+
+			if(db->dict->ht[0].size < db->dict->ht[1].size){
+				hash_size = db->dict->ht[1].size;
+			}
+			else {
+				hash_size = db->dict->ht[0].size;
+			}
+
+			int min_idx, max_idx;
+
+			int quotient = hash_size / server.aof_pthread_num;
+			int remainder = hash_size % server.aof_pthread_num;
+
+			/*version1*/
+			if(remainder != 0){
+				if(idx == server.aof_pthread_num){
+					min_idx = (idx - 1) * quotient;
+					max_idx = (idx * quotient) + remainder;
+				}
+				else {
+					min_idx = (idx - 1) * quotient;
+					max_idx = idx * quotient;
+				}
+			}
+			else {
+				min_idx = (idx - 1) * quotient;
+				max_idx = idx * quotient;
+			}
+
+			//serverLog(LL_VERBOSE, "[TH:%d], min: %d, max: %d", idx, min_idx, max_idx);
+
+			/*tmp aof file*/
+			snprintf(tmpfile, 256, "CTaof%d.aof", (int) idx);
+			//snprintf(tmpfile, 256, "temp%d-%d.rdb", (int) idx, (int) getpid());
+
+			fp = fopen(tmpfile, "w");
+
+			if (!fp) {
+				serverLog(LL_WARNING, "Failed opening .aof for saving: %s",
+						strerror(errno));
+				return C_ERR;
+			}
+
+			rioInitWithFile(&rdb, fp);
+			if (parallelAppendOnlyFileRio(&rdb,&error,min_idx,max_idx,idx) == C_ERR) {  // Parallel AOF
+				serverLog(LL_VERBOSE, "parallelAppendOnlyFileRio ERROR");
+				fclose(fp);
+				unlink(tmpfile);
+				return C_ERR;
+			}
+
+
+	    /* Make sure data will not remain on the OS's output buffers */
+	    if (fflush(fp) == EOF) {
+	    	serverLog(LL_VERBOSE, "fflush ERROR");
+	    	fclose(fp);
+	    	unlink(tmpfile);
+	    	return C_ERR;
+	    }
+
+	    if (fsync(fileno(fp)) == -1) {
+	    	serverLog(LL_VERBOSE, "fsync ERROR");
+	    	fclose(fp);
+	    	unlink(tmpfile);
+	    	return C_ERR;
+	    }
+	    if (fclose(fp) == EOF) {
+	    	serverLog(LL_VERBOSE, "fclose ERROR");
+	    	fclose(fp);
+	    	unlink(tmpfile);
+	    	return C_ERR;
+	    }
+
+	    return C_OK;//(void *)(C_OK);
+	}
+
+
+	int parallelAppendOnlyFileRio(rio *aof, int *error, int min_idx, int max_idx, int idx) {
+	    dictIterator *di = NULL;
+	    dictEntry *de;
+	    int j;
+	    size_t processed = 0;
+	    long long now = mstime();
+
+
+	    for (j = 0; j < 1; j++) {
+
+	        char selectcmd[] = "*2\r\n$6\r\nSELECT\r\n";
+	        redisDb *db = server.db+j;
+	        dict *d = db->dict;
+	        if (dictSize(d) == 0) continue;
+
+	        if(min_idx == 0){
+	        	 di = dictGetSafeIteratorwithMaxIdx(d, min_idx, max_idx);
+	        } else {
+	        	 di = dictGetSafeIteratorwithMinMaxIdx(d, min_idx, max_idx); // dictGetSafeIterator(d);
+	        }
+
+	        if (!di) return C_ERR;
+
+	        /* SELECT the new DB */
+	        if (rioWrite(aof,selectcmd,sizeof(selectcmd)-1) == 0) goto werr;
+	        if (rioWriteBulkLongLong(aof,j) == 0) goto werr;
+
+
+	        /* Iterate this DB writing every entry */
+	        while((de = dictNextwithIdx(di)) != NULL) {
+
+	        	if(di->index >= di->maxindex){
+	        		break;
+	        			}
+
+	        	sds keystr = dictGetKey(de);
+	        	robj key, *o = dictGetVal(de);
+	        	long long expiretime;
+
+	        	initStaticStringObject(key, keystr);
+	        	expiretime = getExpire(db, &key);
+
+	        	/* If this key is already expired skip it */
+	        	if (expiretime != -1 && expiretime < now) continue;
+
+	        	 /* Save the key and associated value */
+	        	if(o->type == OBJ_STRING){
+	        		/* Emit a SET command */
+	        		char cmd[]="*3\r\n$3\r\nSET\r\n";
+	        		if (rioWrite(aof,cmd,sizeof(cmd)-1) == 0) goto werr;
+	        		/* Key and value */
+	        		if (rioWriteBulkObject(aof,&key) == 0) goto werr;
+	        		if (rioWriteBulkObject(aof,o) == 0) goto werr;
+	        	} else if (o->type == OBJ_LIST) {
+	        		if (rewriteListObject(aof,&key,o) == 0) goto werr;
+	        	} else if (o->type == OBJ_SET) {
+	                if (rewriteSetObject(aof,&key,o) == 0) goto werr;
+	        	} else if (o->type == OBJ_ZSET) {
+	                if (rewriteSortedSetObject(aof,&key,o) == 0) goto werr;
+	        	} else if (o->type == OBJ_HASH) {
+	                if (rewriteHashObject(aof,&key,o) == 0) goto werr;
+	        	} else if (o->type == OBJ_MODULE) {
+	                if (rewriteModuleObject(aof,&key,o) == 0) goto werr;
+	        	} else {
+	        		serverPanic("Unknown object type");
+	        	}
+	        	/* Save the expire time */
+	        	if (expiretime != -1) {
+	        		char cmd[]="*3\r\n$9\r\nPEXPIREAT\r\n";
+	        		if (rioWrite(aof,cmd,sizeof(cmd)-1) == 0) goto werr;
+	        		if (rioWriteBulkObject(aof,&key) == 0) goto werr;
+	        		if (rioWriteBulkLongLong(aof,expiretime) == 0) goto werr;
+	            }
+	        }
+
+	        dictReleaseIterator(di);
+	    }
+	    di = NULL; /* So that we don't release it again on error. */
+
+	    return C_OK;
+
+	werr:
+	    if (error) *error = errno;
+	    if (di) dictReleaseIterator(di);
+	    return C_ERR;
 }
 
 
@@ -2209,7 +2420,7 @@ void backgroundSaveDoneHandlerDisk(int exitcode, int bysignal) {
  *  TODO Parallel AOF DoneHandler
  */
 void backgroundParallelSaveDoneHandler(int exitcode, int bysignal) {
-
+	server.rdb_child_pid = -1;
 }
 
 /* A background saving child (BGSAVE) terminated its work. Handle this.
