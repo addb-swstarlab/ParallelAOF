@@ -1340,7 +1340,15 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
         /* Child */
         closeListeningSockets(0);
         redisSetProcTitle("redis-rdb-bgsave");
-        retval = rdbSave(filename,rsi);
+
+        /* juyeon */
+        if (server.aof_pthread_num > 1) {
+        	retval = aofParallelSave(); // server.c - prepareForShutdown()
+        	} else {
+        		retval = rdbSave(filename,rsi);
+        	}
+
+
         if (retval == C_OK) {
             size_t private_dirty = zmalloc_get_private_dirty(-1);
 
@@ -1369,7 +1377,14 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
         serverLog(LL_NOTICE,"Background saving started by pid %d",childpid);
         server.rdb_save_time_start = time(NULL);
         server.rdb_child_pid = childpid;
-        server.rdb_child_type = RDB_CHILD_TYPE_DISK;
+
+        if (server.aof_pthread_num == 1) {
+        	server.rdb_child_type = RDB_CHILD_TYPE_DISK;
+        }
+        else {
+        	server.rdb_child_type = PAOF_CHILD_TYPE; // #define PAOF_CHILD_TYPE 3
+        	}
+
         updateDictResizePolicy();
         return C_OK;
     }
@@ -1382,6 +1397,15 @@ void rdbRemoveTempFile(pid_t childpid) {
     snprintf(tmpfile,sizeof(tmpfile),"temp-%d.rdb", (int) childpid);
     unlink(tmpfile);
 }
+
+/* juyeon
+ * TODO implement Parallel AOF module
+ * */
+
+int aofParallelSave() {
+	return C_OK;
+}
+
 
 /* This function is called by rdbLoadObject() when the code is in RDB-check
  * mode and we find a module value of type 2 that can be parsed without
@@ -2181,6 +2205,13 @@ void backgroundSaveDoneHandlerDisk(int exitcode, int bysignal) {
     updateSlavesWaitingBgsave((!bysignal && exitcode == 0) ? C_OK : C_ERR, RDB_CHILD_TYPE_DISK);
 }
 
+/* juyeon
+ *  TODO Parallel AOF DoneHandler
+ */
+void backgroundParallelSaveDoneHandler(int exitcode, int bysignal) {
+
+}
+
 /* A background saving child (BGSAVE) terminated its work. Handle this.
  * This function covers the case of RDB -> Salves socket transfers for
  * diskless replication. */
@@ -2285,6 +2316,9 @@ void backgroundSaveDoneHandler(int exitcode, int bysignal) {
     case RDB_CHILD_TYPE_SOCKET:
         backgroundSaveDoneHandlerSocket(exitcode,bysignal);
         break;
+    case PAOF_CHILD_TYPE:
+    	  backgroundParallelSaveDoneHandler(exitcode, bysignal);
+    	  break;
     default:
         serverPanic("Unknown RDB child type.");
         break;
