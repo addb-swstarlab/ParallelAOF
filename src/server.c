@@ -3888,6 +3888,24 @@ int checkForSentinelMode(int argc, char **argv) {
 
 /* Function called at startup to load RDB or AOF file in memory. */
 void loadDataFromDisk(void) {
+
+	/* mathcom - PAOF Recovery */
+
+	if (server.aof_state == AOF_ON){
+		if(server.aof_pthread_num > 1){
+			serverLog(LL_WARNING, "parallel aof_only on!");
+		}
+		else {
+			serverLog(LL_WARNING, "aof_only on!");
+		}
+	}
+
+	else if(server.aof_state == AOF_OFF){
+		serverLog(LL_WARNING, "rdb_only on!");
+	}
+	else{
+		serverLog(LL_NOTICE, "LOGGING MODE ERROR!");
+	}
     long long start = ustime();
     if (server.aof_state == AOF_ON) {
         if (loadAppendOnlyFile(server.aof_filename) == C_OK)
