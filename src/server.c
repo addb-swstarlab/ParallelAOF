@@ -3906,6 +3906,7 @@ void loadDataFromDisk(void) {
 	else{
 		serverLog(LL_NOTICE, "LOGGING MODE ERROR!");
 	}
+
     long long start = ustime();
     if (server.aof_state == AOF_ON) {
         if (loadAppendOnlyFile(server.aof_filename) == C_OK)
@@ -3941,6 +3942,31 @@ void loadDataFromDisk(void) {
         }
     }
 }
+
+/* mathcom - PAOF Recovery for each cases */
+void loadData_parallel_aof(void){
+		serverLog(LL_WARNING, "PAOF Recovery");
+		long long start = ustime();
+		bool temp_paof = false, temp_aof = false, aof = false, paof = false;
+
+		if (access(CONFIG_DEFAULT_TEMP_AOF_FILENAME, F_OK) == 0) temp_aof = true;
+		if (checktemppaoffile(server.aof_pthread_num) == 0) temp_paof =true;
+		if (access(server.aof_filename, F_OK) == 0) aof = true;
+		if (checkpaoffile(server.aof_pthread_num) == 0) paof =true;
+
+		if (aof && !temp_aof && !paof && !temp_paof) {
+			start = ustime();
+			if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+				serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+			}
+		}
+
+		else {
+			serverLog(LL_WARNING, "File is not existed");
+		}
+		serverLog(LL_WARNING, "recovery complete (parallel aof mode)");
+}
+
 
 void redisOutOfMemoryHandler(size_t allocation_size) {
     serverLog(LL_WARNING,"Out Of Memory allocating %zu bytes!",
