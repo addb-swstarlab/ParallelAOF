@@ -3907,8 +3907,15 @@ void loadDataFromDisk(void) {
 		serverLog(LL_NOTICE, "LOGGING MODE ERROR!");
 	}
 
-    long long start = ustime();
-    if (server.aof_state == AOF_ON) {
+
+	long long start = ustime();
+	if (server.aof_state == AOF_ON &&  server.aof_pthread_num > 1) {
+
+			loadData_parallel_aof();
+			return;
+	}
+
+	if (server.aof_state == AOF_ON &&  server.aof_pthread_num == 1) {
         if (loadAppendOnlyFile(server.aof_filename) == C_OK)
             serverLog(LL_NOTICE,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
     } else {
