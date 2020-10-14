@@ -49,6 +49,8 @@
 #include <lua.h>
 #include <signal.h>
 
+#include "stdbool.h"  /* Resolve type 'bool' */
+
 typedef long long mstime_t; /* millisecond time type. */
 typedef long long ustime_t; /* microsecond time type. */
 
