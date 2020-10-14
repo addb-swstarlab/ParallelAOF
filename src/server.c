@@ -4040,6 +4040,185 @@ void loadData_parallel_aof(void){
 		serverLog(LL_WARNING, "recovery complete (parallel aof mode)");
 }
 
+void _loadData_parallel_aof(void){
+	serverLog(LL_WARNING, "PAOF Recovery");
+	long long start = ustime();
+	bool temp_paof = false, temp_aof = false, aof = false, paof = false;
+
+	if (access(CONFIG_DEFAULT_TEMP_AOF_FILENAME, F_OK) == 0) temp_aof = true;
+	if (checktemppaoffile(server.aof_pthread_num) == 0) temp_paof =true;
+	if (access(server.aof_filename, F_OK) == 0) aof = true;
+	if (checkpaoffile(server.aof_pthread_num) == 0) paof =true;
+
+	if (aof && !temp_aof && !paof && !temp_paof) {
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && temp_aof && !paof && !temp_paof) {
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(CONFIG_DEFAULT_TEMP_AOF_FILENAME) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from temp append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && temp_aof && !paof && temp_paof) {
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(CONFIG_DEFAULT_TEMP_AOF_FILENAME) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from temp append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && !temp_aof && !paof && temp_paof) {
+	    start = ustime();
+	    if (Load_PAOF(1) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from Temp PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && !temp_aof && paof && !temp_paof) {
+	    start = ustime();
+	    if (Load_PAOF(0) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from Temp PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && !temp_aof && paof && temp_paof) {
+	    start = ustime();
+	    if (Load_PAOF(2) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from Temp PAOF & PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && temp_aof && paof && temp_paof) {
+	    start = ustime();
+	    if (Load_PAOF(0) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from Temp PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else {
+		serverLog(LL_WARNING, "File is not existed");
+	}
+	serverLog(LL_WARNING, "recovery complete (parallel aof mode)");
+}
+
+
+void __loadData_parallel_aof(void){
+	serverLog(LL_WARNING, "PAOF Recovery");
+	long long start = ustime();
+	bool temp_paof = false, temp_aof = false, aof = false, paof = false;
+
+	if (access(CONFIG_DEFAULT_TEMP_AOF_FILENAME, F_OK) == 0) temp_aof = true;
+	if (checktemppaoffile(server.aof_pthread_num) == 0) temp_paof =true;
+	if (access(server.aof_filename, F_OK) == 0) aof = true;
+	if (checkpaoffile(server.aof_pthread_num) == 0) paof =true;
+
+	if (aof && !temp_aof && !paof && !temp_paof) {
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && temp_aof && !paof && !temp_paof) {
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(CONFIG_DEFAULT_TEMP_AOF_FILENAME) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from temp append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && temp_aof && !paof && temp_paof) {
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(CONFIG_DEFAULT_TEMP_AOF_FILENAME) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from temp append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && !temp_aof && !paof && temp_paof) {
+	    start = ustime();
+	    if (Load_PAOF(1) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from Temp PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && !temp_aof && paof && !temp_paof) {
+	    start = ustime();
+	    if (Load_PAOF(0) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from Temp PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && !temp_aof && paof && temp_paof) {
+	    start = ustime();
+	    if (Load_PAOF(3) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from Temp PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else if (aof && temp_aof && paof && temp_paof) {
+	    start = ustime();
+	    if (Load_PAOF(0) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from Temp PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	    start = ustime();
+	    if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+	    	serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+	    }
+	}
+
+	else {
+		serverLog(LL_WARNING, "File is not existed");
+	}
+	serverLog(LL_WARNING, "recovery complete (parallel aof mode)");
+
+}
 
 void redisOutOfMemoryHandler(size_t allocation_size) {
     serverLog(LL_WARNING,"Out Of Memory allocating %zu bytes!",
