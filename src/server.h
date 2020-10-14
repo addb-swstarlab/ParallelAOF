@@ -1659,6 +1659,10 @@ int checktemppaoffile(int file_count);
 int get_paoffile_cnt();
 int get_temppaoffile_cnt();
 
+void loadData_parallel_aof(void);
+void _loadData_parallel_aof(void);
+void __loadData_parallel_aof(void);
+
 /* AOF persistence */
 void flushAppendOnlyFile(int force);
 void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int argc);
