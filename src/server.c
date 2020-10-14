@@ -3911,8 +3911,25 @@ void loadDataFromDisk(void) {
 	long long start = ustime();
 	if (server.aof_state == AOF_ON &&  server.aof_pthread_num > 1) {
 
+		int paof_cnt = get_paoffile_cnt();
+		int temp_paof_cnt = get_temppaoffile_cnt();
+
+		if( (paof_cnt == temp_paof_cnt) && (paof_cnt == server.aof_pthread_num) && (temp_paof_cnt == server.aof_pthread_num)){
 			loadData_parallel_aof();
 			return;
+		} else {
+			if(((paof_cnt + temp_paof_cnt) == server.aof_pthread_num) && (paof_cnt != 0 && temp_paof_cnt != 0)) {
+				_loadData_parallel_aof();
+				return;
+			}  else if(paof_cnt == server.aof_pthread_num && temp_paof_cnt != 0) {
+				__loadData_parallel_aof();
+				return;
+			}
+			else {
+				loadData_parallel_aof();
+				return;
+			}
+		}
 	}
 
 	if (server.aof_state == AOF_ON &&  server.aof_pthread_num == 1) {
