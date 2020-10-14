@@ -3908,13 +3908,14 @@ void loadDataFromDisk(void) {
 	}
 
 
+
 	long long start = ustime();
 	if (server.aof_state == AOF_ON &&  server.aof_pthread_num > 1) {
 
 		int paof_cnt = get_paoffile_cnt();
 		int temp_paof_cnt = get_temppaoffile_cnt();
 
-		if( (paof_cnt == temp_paof_cnt) && (paof_cnt == server.aof_pthread_num) && (temp_paof_cnt == server.aof_pthread_num)){
+		if((paof_cnt == temp_paof_cnt) && (paof_cnt == server.aof_pthread_num) && (temp_paof_cnt == server.aof_pthread_num)){
 			loadData_parallel_aof();
 			return;
 		} else {
@@ -4559,9 +4560,9 @@ int main(int argc, char **argv) {
         serverLog(LL_WARNING,"WARNING: You specified a maxmemory value that is less than 1MB (current value is %llu bytes). Are you sure this is what you really want?", server.maxmemory);
     }
 
-    pthread_t p_thread;
-    int thr_id, attr;
-    thr_id = pthread_create(&p_thread, NULL, memory_logging_function, (void *)&attr);
+    //pthread_t p_thread;
+    //int thr_id, attr;
+    //thr_id = pthread_create(&p_thread, NULL, memory_logging_function, (void *)&attr);
 
 
     aeSetBeforeSleepProc(server.el,beforeSleep);
