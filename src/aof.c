@@ -2237,20 +2237,7 @@ void backgroundParallelSaveDoneHandler(int exitcode, int bysignal){
      * (the first stage of SYNC is a bulk transfer of dump.rdb) */
     updateSlavesWaitingBgsave((!bysignal && exitcode == 0) ? C_OK : C_ERR, RDB_CHILD_TYPE_DISK);
 
-    /*
-     * rewrite buffer append
-     *  temp aof rename, fd change
-        * */
 
-       FILE *fp;
-
-       if (aofRewriteBufferWrite(fileno(fp)) == -1) {
-           serverLog(LL_WARNING,
-               "Error trying to flush the parent diff to the rewritten AOF: %s", strerror(errno));
-           close(fileno(fp));
-           aofRewriteBufferReset();
-
-       }
        aofRewriteBufferReset();
 
        if (rename(CONFIG_DEFAULT_TEMP_AOF_FILENAME,server.aof_filename) == -1) { // rename temp aof
