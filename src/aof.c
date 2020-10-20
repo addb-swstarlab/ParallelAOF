@@ -2243,25 +2243,6 @@ void backgroundParallelSaveDoneHandler(int exitcode, int bysignal){
         * */
 
        FILE *fp;
-       int ret;
-
-       if ((fp = fopen(CONFIG_DEFAULT_TEMP_AOF_FILENAME, "w")) == NULL) {
-       	serverLog(LL_WARNING, "Error open to the temporary AOF file : %s", strerror(errno));
-       	return;
-       }
-
-       if((ret = append_selected_db_command(fileno(fp))) == -1) { // Append Select DB Command(Current Database Number)
-       	serverLog(LL_WARNING, "Error Append Select DB Command");
-       	exit(1);
-   	}
-
-
-       if (fileno(fp) == -1) {
-           serverLog(LL_WARNING,
-               "Unable to open the temporary AOF produced by the child: %s", strerror(errno));
-           aofRewriteBufferReset();
-
-       }
 
        if (aofRewriteBufferWrite(fileno(fp)) == -1) {
            serverLog(LL_WARNING,
@@ -2278,8 +2259,6 @@ void backgroundParallelSaveDoneHandler(int exitcode, int bysignal){
            exit(1);
        }
 
-
-       server.aof_fd = fileno(fp);
 
        /*renaming aof file*/
       	rdbRenameAllTempFile(server.aof_pthread_num);
@@ -2601,6 +2580,13 @@ void aof_with_parallel(){
 		serverLog(LL_WARNING, "Error open to the temporary AOF file : %s", strerror(errno));
 		return;
 	}
+
+	if((ret = append_selected_db_command(fileno(fp))) == -1) { // Append Select DB Command(Current Database Number)
+		serverLog(LL_WARNING, "Error Append Select DB Command");
+		exit(1);
+	}
+
+	server.aof_fd = fileno(fp);
 
 	if(rdbSaveBackground(CONFIG_DEFAULT_TEMP_PAOF_FILENAME, NULL) == C_OK)
 		serverLog(LL_NOTICE, "Background PAOF started(Parallel AOF Mode)");
