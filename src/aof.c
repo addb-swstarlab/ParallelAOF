@@ -679,11 +679,6 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
      * in a buffer, so that when the child process will do its work we
      * can append the differences to the new append only file. */
 
-    if (server.rdb_child_pid != -1 && server.aof_pthread_num > 1){
-
-    	aofRewriteBufferPAppend((unsigned char*)buf,sdslen(buf));
-       }
-
     if (server.aof_child_pid != -1)
     	aofRewriteBufferAppend((unsigned char*)buf,sdslen(buf));
 
