@@ -4164,6 +4164,21 @@ void _loadData_parallel_aof(void){
 	    }
 	}
 
+	else if (aof && temp_aof && paof && !temp_paof) {
+		start = ustime();
+		if (Load_PAOF(0) == C_OK) {
+			serverLog(LL_WARNING,"DB loaded from PAOF file: %.3f seconds",(float)(ustime()-start)/1000000);
+		}
+		start = ustime();
+		if (loadAppendOnlyFile(server.aof_filename) == C_OK) {
+			serverLog(LL_WARNING,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+		}
+		start = ustime();
+		if (loadAppendOnlyFile(CONFIG_DEFAULT_TEMP_AOF_FILENAME) == C_OK) {
+			serverLog(LL_WARNING,"DB loaded from temp append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+		}
+	}
+
 	else {
 		serverLog(LL_WARNING, "File is not existed");
 	}
