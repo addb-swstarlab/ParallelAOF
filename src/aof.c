@@ -2215,7 +2215,7 @@ void backgroundParallelSaveDoneHandler(int exitcode, int bysignal){
         serverLog(LL_WARNING,
             "Parallel Background saving terminated by signal %d", bysignal);
         latencyStartMonitor(latency);
-        rdbRemoveAllTempFile(server.aof_pthread_num);
+        RemoveAllCTAOF(server.aof_pthread_num);
         latencyEndMonitor(latency);
         latencyAddSampleIfNeeded("rdb-unlink-temp-file",latency);
         /* SIGUSR1 is whitelisted, so we have a way to kill a child without
@@ -2240,7 +2240,7 @@ void backgroundParallelSaveDoneHandler(int exitcode, int bysignal){
 
 
        /*renaming aof file*/
-      	rdbRenameAllTempFile(server.aof_pthread_num);
+       RenameAllCTAOF(server.aof_pthread_num);
 
       server.aof_selected_db = -1;
       aofUpdateCurrentSize();
@@ -2253,7 +2253,7 @@ void backgroundParallelSaveDoneHandler(int exitcode, int bysignal){
 
 
 
-void rdbRemoveAllTempFile(int file_count){
+void RemoveAllCTAOF(int file_count){
 		char tmpfile[256];
 		int i;
 		for(i=0; i < file_count; i++){
@@ -2263,7 +2263,7 @@ void rdbRemoveAllTempFile(int file_count){
 		}
 }
 
-void rdbRenameAllTempFile(int file_count){
+void RenameAllCTAOF(int file_count){
 
 		char tmpfile[256];
 		char dumpfile[256];
